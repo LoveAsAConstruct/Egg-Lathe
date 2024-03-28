@@ -9,13 +9,14 @@ import colorsys
 
 STEPS = 200
 interleave = False
-
+COMMAND_TIME = 663723456
 class Command:
     def __init__(self, type, value="None", layer = 0, split_pattern=r"[\{\[\|\]\}]"):
         self.type = type.lower()
         self.value = value
         self.commands = []
         self.layer = layer
+        self.movement = None
         if self.type == "raw":
             for subcommand in re.split(split_pattern, value):
                 if subcommand:  # This checks if the subcommand is not an empty string
@@ -34,6 +35,7 @@ class Command:
             self.commands.append(f"rotateEgg {movement[1]}")
         elif self.type in ["cal", "calibrate"]:
             self.commands.append("calibrate")
+            
     def execute(self, serial):
         for command in self.commands:
             self.send_command(command, serial)
@@ -54,8 +56,10 @@ class Command:
 class Queue():
     def __init__(self):
         self.queue = []
+        self.length = 0
         self.layers = set()
         self.position = (0,0)
+        
     def add(self, commandset):
         if isinstance(commandset, list):
             if isinstance(commandset[0], Command):
@@ -68,6 +72,7 @@ class Queue():
             if commandset.layer == None:
                 commandset.layer = len(self.layers)
             self.queue.append(commandset)
+            self.length += 1
             self.layers.add(commandset.layer)
             if commandset.type == "move":
                 self.position = (self.position[0]+commandset.value[0],self.position[1]+commandset.value[1])
@@ -77,22 +82,23 @@ class Queue():
         print(f"executing queue with length {len(self.queue)}")
         if window != None:
             windowExecution = True
-            window.looping = 0
+            window.progress = 0
         else:
             windowExecution = False
-        commandtime = 0
+        commandtime = COMMAND_TIME
         commands = 1
         for command in self.queue:
             start_time = time.time_ns()
             command.execute(serial)
             if windowExecution:
-                window.looping += 1
+                window.progress += 1
                 window.consoleText = command.commands[0]
-                window.loop()
+                window.updateAll()
             commandtime = commandtime + (time.time_ns() - start_time)
             commands += 1
             window.commandtime = commandtime/commands
             print(commandtime)
+            
     def get_layer_colors(self):
         """
         Generate unique colors for each layer, ensuring high contrast with a gray background.
@@ -107,6 +113,7 @@ class Queue():
             rgb = colorsys.hsv_to_rgb(hue, saturation, value)
             layer_colors[layer] = tuple(int(255 * c) for c in rgb)
         return layer_colors
+    
     def previewPygame(self, bounds=(False, True), interleave=False, surface=None, executionIndex = None):
         def _draw_commands(draw_surface, x, y, bounds, interleave, pen_down, scalar = 1):
             # Placeholder for drawing logic
@@ -169,8 +176,12 @@ class Queue():
                     end_pos = (int(x), int(y))
                     if True:
                         if stepped_lines:
-                            pygame.draw.line(draw_surface, color, start_pos, (end_pos[0], start_pos[1]))
-                            pygame.draw.line(draw_surface, color, (end_pos[0], start_pos[1]), end_pos)
+                            if color == (0,0,0):
+                                width = 3
+                            else:
+                                width = 1
+                            pygame.draw.line(draw_surface, color, start_pos, (end_pos[0], start_pos[1]), width)
+                            pygame.draw.line(draw_surface, color, (end_pos[0], start_pos[1]), end_pos, width)
                         else:
                             pygame.draw.line(draw_surface, color, start_pos, end_pos)
                     start_pos = end_pos
@@ -204,6 +215,14 @@ class Queue():
 
             # This is the drawing surface for a standalone window
             draw_surface = screen
+        elif surface == False:
+            scalar = 2
+            margin = 0
+            bedsize = int(STEPS*scalar)
+            # Window dimensions for standalone mod
+            width, height = int(STEPS*scalar), int(STEPS*scalar)
+            screen = pygame.Surface((width,height))
+            draw_surface = screen
         else:
             # Use the provided surface for drawing
             draw_surface = surface
@@ -235,8 +254,10 @@ class Queue():
         else:
             # If drawing on an existing surface, just call the drawing logic directly
             # Clear the provided surface before drawing
-            surface.fill((255, 255, 255))
+            draw_surface.fill((255, 255, 255))
             _draw_commands(draw_surface, x, y, bounds, interleave, pen_down, bedsize/STEPS)
+        if surface == False:
+            return draw_surface
 
     def preview(self, bounds = (True,True)):
         td = turtle.Turtle("classic")
