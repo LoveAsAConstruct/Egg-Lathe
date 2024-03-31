@@ -31,25 +31,29 @@ class Command:
             else:
                 movement = (0, 0)
             self.movement = movement
-            self.commands.append(f"moveLinear {movement[0]}")
-            self.commands.append(f"rotateEgg {movement[1]}")
+            self.commands.append(f"C-MX {movement[0]}")
+            self.commands.append(f"C-MY {movement[1]}")
         elif self.type in ["cal", "calibrate"]:
-            self.commands.append("calibrate")
+            self.commands.append("C-CB")
             
     def execute(self, serial):
         for command in self.commands:
             self.send_command(command, serial)
-
         return True
     
     def send_command(self, command, ser):
         print(f"Sending: {command}")
         ser.write((command + "\n").encode())
+        start_time = time.time()
         while True:
+            if abs(start_time-time.time()) > 5:
+                print("Breaktime")
+                return
             if ser.in_waiting > 0:
                 response = ser.readline().decode().strip()
-                print(f"{response} recieved")
-                return response
+                if response == "-CC":
+                    print(f"{response} recieved")
+                    return response
             
     
     
@@ -92,6 +96,7 @@ class Queue():
             command.execute(serial)
             if windowExecution:
                 window.progress += 1
+                window.commandTime = commandtime
                 window.consoleText = command.commands[0]
                 window.updateAll()
             commandtime = commandtime + (time.time_ns() - start_time)

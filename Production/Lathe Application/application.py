@@ -40,6 +40,12 @@ class MainWindow(QMainWindow):
         self.consoleTextLabel.setFont(QFont(None, 25))
         self.consoleTextLabel.setAlignment(Qt.AlignCenter)
         self.leftLayout.addWidget(self.consoleTextLabel)
+        
+        # ETA text label
+        self.etaText = QLabel("ETA")
+        self.etaText.setFont(QFont(None, 25))
+        self.etaText.setAlignment(Qt.AlignCenter)
+        self.leftLayout.addWidget(self.consoleTextLabel)
 
         # Right layout for the movement control panel and execute button
         self.rightLayout = QVBoxLayout()
@@ -81,7 +87,7 @@ class MainWindow(QMainWindow):
 
     def updatePreview(self):
         if self.progress != self.oldProgress:
-            self.previewPaths(self.progress)
+            self.previewPaths(progress=self.progress)
             self.oldProgress = self.progress
     def startSimulation(self):
         self.simulationTimer.start(10)
@@ -119,6 +125,7 @@ class MainWindow(QMainWindow):
     def updateAll(self):
         self.updateExecuteButton()
         self.updateConsoleText()
+        self.previewPaths(progress=self.progress)
         QApplication.processEvents()
     def previewPaths(self,progress = None):
         self.displayPygameSurface(self.queue.previewPygame((False,True), surface = False, executionIndex = progress))
@@ -173,6 +180,7 @@ class MainWindow(QMainWindow):
 
     def updateConsoleText(self):
         self.consoleTextLabel.setText(self.consoleText)
+        self.etaText.setText(str(((len(self.queue.queue)-self.progress)*self.commandtime)/1000000000))
         
     def pygameSurfaceToQPixmap(self, pygameSurface):
         """Converts a Pygame surface to a QPixmap using a BytesIO object."""
