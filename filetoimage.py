@@ -33,6 +33,6 @@ def file_to_image_rgb(file_path, output_image_path):
     img.save(output_image_path)
 
 # Example usage
-file_path = 'Production/Lathe Application.zip'  # Path to your binary file
-output_image_path = 'output_rgb_application_file.png'
+file_path = '/Users/isaiahmurray/Documents/Egg Lathe/Production/Lathe Firmware/Egg_Lathe/Egg_Lathe.ino'  # Path to your binary file
+output_image_path = 'firmware.png'
 file_to_image_rgb(file_path, output_image_path)

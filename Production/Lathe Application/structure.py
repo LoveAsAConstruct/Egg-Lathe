@@ -1,7 +1,5 @@
 
-import serial
 import time
-import math
 import turtle
 import re
 import pygame
